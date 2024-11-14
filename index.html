@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do App with Local Storage</title>
+  <style>
+    /* Basic styling */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(to right, #74ebd5, #acb6e5);
+      margin: 0;
+    }
+
+    .container {
+      display: flex;
+      width: 90%;
+      max-width: 900px;
+      background-color: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .left-pane, .right-pane {
+      padding: 30px;
+    }
+
+    .left-pane {
+      width: 50%;
+      background-color: #f7f9fc;
+      border-right: 1px solid #eee;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .right-pane {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    h2 {
+      color: #333;
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .task-list {
+      list-style: none;
+      padding: 0;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .task-item.completed .task-text {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    .task-text {
+      flex: 1;
+      font-size: 1em;
+      padding-left: 10px;
+    }
+
+    .task-controls {
+      display: flex;
+      align-items: center;
+    }
+
+    .task-controls button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2em;
+      margin-left: 5px;
+      color: #333;
+      transition: color 0.3s;
+    }
+
+    .task-controls button:hover {
+      color: #007BFF;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      resize: none;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Left Pane - Task List -->
+    <div class="left-pane">
+      <h2>Tasks</h2>
+      <ul id="taskList" class="task-list">
+        <!-- Task items will be dynamically added here -->
+      </ul>
+    </div>
+
+    <!-- Right Pane - Task Input -->
+    <div class="right-pane">
+      <h2>Add Task</h2>
+      <textarea id="taskInput" placeholder="Enter your task here"></textarea>
+    </div>
+  </div>
+
+  <script>
+    // JavaScript for the To-Do App functionality
+
+    const taskInput = document.getElementById("taskInput");
+    const taskList = document.getElementById("taskList");
+
+    // Load tasks from localStorage on page load
+    document.addEventListener("DOMContentLoaded", loadTasks);
+
+    // Event listener for adding a new task
+    taskInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && taskInput.value.trim()) {
+        e.preventDefault();
+        addTask(taskInput.value.trim());
+        taskInput.value = "";
+      }
+    });
+
+    function loadTasks() {
+      const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+      tasks.forEach(task => renderTask(task));
+    }
+
+    function saveTasks(tasks) {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function getTasks() {
+      return JSON.parse(localStorage.getItem("tasks")) || [];
+    }
+
+    function addTask(text) {
+      const newTask = { id: Date.now(), text, completed: false };
+      const tasks = getTasks();
+      tasks.push(newTask);
+      saveTasks(tasks);
+      renderTask(newTask);
+    }
+
+    function renderTask(task) {
+      const taskItem = document.createElement("li");
+      taskItem.classList.add("task-item");
+      if (task.completed) taskItem.classList.add("completed");
+
+      // Checkbox for completion
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = task.completed;
+      checkbox.addEventListener("change", () => toggleTaskCompletion(task.id, taskItem));
+
+      // Task text
+      const taskText = document.createElement("span");
+      taskText.classList.add("task-text");
+      taskText.textContent = task.text;
+
+      // Task controls
+      const taskControls = document.createElement("div");
+      taskControls.classList.add("task-controls");
+
+      // Edit button
+      const editButton = document.createElement("button");
+      editButton.innerHTML = "✏️";
+      editButton.addEventListener("click", () => editTask(task.id, taskText));
+
+      // Delete button
+      const deleteButton = document.createElement("button");
+      deleteButton.innerHTML = "❌";
+      deleteButton.addEventListener("click", () => deleteTask(task.id, taskItem));
+
+      taskControls.appendChild(editButton);
+      taskControls.appendChild(deleteButton);
+
+      taskItem.appendChild(checkbox);
+      taskItem.appendChild(taskText);
+      taskItem.appendChild(taskControls);
+
+      taskList.appendChild(taskItem);
+    }
+
+    function toggleTaskCompletion(taskId, taskItem) {
+      const tasks = getTasks();
+      const task = tasks.find(t => t.id === taskId);
+      task.completed = !task.completed;
+      saveTasks(tasks);
+      taskItem.classList.toggle("completed");
+    }
+
+    function deleteTask(taskId, taskItem) {
+      let tasks = getTasks();
+      tasks = tasks.filter(task => task.id !== taskId);
+      saveTasks(tasks);
+      taskList.removeChild(taskItem);
+    }
+
+    function editTask(taskId, taskTextElement) {
+      const newText = prompt("Edit your task:", taskTextElement.textContent);
+      if (newText !== null && newText.trim()) {
+        const tasks = getTasks();
+        const task = tasks.find(t => t.id === taskId);
+        task.text = newText.trim();
+        saveTasks(tasks);
+        taskTextElement.textContent = task.text;
+      }
+    }
+  </script>
+
+</body>
+</html>
